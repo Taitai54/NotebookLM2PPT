@@ -10,6 +10,7 @@
 注意：默认使用微软电脑管家的智能圈选功能（快捷键：Ctrl+Shift+A）
 """
 
+import re
 import time
 import threading
 import cv2
@@ -201,6 +202,28 @@ def check_and_close_download_folder(initial_explorer_windows, timeout=10, check_
     return closed_count
 
 
+OFFSET_319 = 175
+OFFSET_LEGACY = 210
+
+def _compute_done_button_offset(pc_manager_version: str | None, fallback: int) -> int:
+    """Infer the done-button offset based on PC Manager version."""
+    if not pc_manager_version:
+        return fallback
+
+    normalized = pc_manager_version.strip().lower()
+    numeric_match = re.match(r"(\d+(?:\.\d+)?)", normalized)
+    if numeric_match:
+        try:
+            numeric_version = float(numeric_match.group(1))
+            return OFFSET_319 if numeric_version >= 3.19 else OFFSET_LEGACY
+        except ValueError:
+            pass
+
+    if "3.19" in normalized or "+" in normalized or "after" in normalized or "new" in normalized:
+        return OFFSET_319
+    return fallback
+
+
 def take_fullscreen_snip(
     delay_before_hotkey: float = 1.0,
     drag_duration: float = 3,
@@ -208,7 +231,9 @@ def take_fullscreen_snip(
     check_ppt_window: bool = True,
     ppt_check_timeout: float = 30,
     width: int = screen_width,
-    height: int = screen_height
+    height: int = screen_height,
+    done_button_right_offset: int | None = None,
+    pc_manager_version: str | None = None,
 ) -> tuple:
     """使用微软电脑管家的智能圈选功能进行全屏截图。
 
@@ -220,6 +245,8 @@ def take_fullscreen_snip(
         ppt_check_timeout: PPT窗口检测超时时间（秒），默认30
         width: 截图宽度，默认为屏幕宽度
         height: 截图高度，默认为屏幕高度
+        done_button_right_offset: 完成按钮的右侧偏移量（像素），用于手动覆盖
+        pc_manager_version: 电脑管家版本号；3.19及以上自动使用 190，低于3.19 使用 210
     
     Returns:
         tuple: (bool, str) - (是否成功检测到新窗口, PPT文件名)
@@ -250,8 +277,18 @@ def take_fullscreen_snip(
     bottom_right = (width+delta, height)
 
     center = (width // 2, height // 2)
-    
-    done_button = (bottom_right[0] - 210, height + 35)
+
+    if done_button_right_offset is not None:
+        resolved_offset = done_button_right_offset
+        offset_source = "手动指定"
+    else:
+        resolved_offset = _compute_done_button_offset(
+            pc_manager_version,
+            fallback=OFFSET_LEGACY,
+        )
+        offset_source = "版本推断/默认"
+    print(f"完成按钮偏移: {resolved_offset} ({offset_source})")
+    done_button = (bottom_right[0] - resolved_offset, height + 35)
 
     if done_button[1] > screen_height:
         done_button = (done_button[0], height - 35)

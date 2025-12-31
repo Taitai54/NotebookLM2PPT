@@ -1,0 +1,1 @@
+python main.py examples/floyd.pdf --pcmgr-version 3.19 -s 0.3

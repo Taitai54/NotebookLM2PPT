@@ -14,7 +14,7 @@ from .utils.screenshot_automation import take_fullscreen_snip, mouse, screen_hei
 from .ppt_combiner import combine_ppt
 
 
-def process_pdf_to_ppt(pdf_path, png_dir, ppt_dir, delay_between_images=2, inpaint=True, dpi=150, timeout=50, display_height=None, display_width=None):
+def process_pdf_to_ppt(pdf_path, png_dir, ppt_dir, delay_between_images=2, inpaint=True, dpi=150, timeout=50, display_height=None, display_width=None, pc_manager_version=None, done_button_offset=None):
     """
     将 PDF 转换为 PNG 图片，然后对每张图片进行截图处理
     
@@ -28,6 +28,8 @@ def process_pdf_to_ppt(pdf_path, png_dir, ppt_dir, delay_between_images=2, inpai
         timeout: PPT 窗口检测超时时间（秒），默认 50
         display_height: 显示窗口高度（像素），默认 None 使用屏幕高度
         display_width: 显示窗口宽度（像素），默认 None 使用屏幕宽度
+        pc_manager_version: 电脑管家版本号；3.19及以上自动使用 190，低于3.19 使用 210
+        done_button_offset: 完成按钮右侧偏移量，传入数字时优先使用，不传则按版本推断
     """
     # 1. 将 PDF 转换为 PNG 图片
     print("=" * 60)
@@ -103,7 +105,9 @@ def process_pdf_to_ppt(pdf_path, png_dir, ppt_dir, delay_between_images=2, inpai
                 check_ppt_window=True,
                 ppt_check_timeout=timeout,
                 width=display_width,
-                height=display_height
+                height=display_height,
+                pc_manager_version=pc_manager_version,
+                done_button_right_offset=done_button_offset,
             )
             if success and ppt_filename:
                 print(f"✓ 图片 {png_file.name} 处理完成，PPT窗口已创建: {ppt_filename}")
@@ -242,6 +246,22 @@ def main():
         metavar='DIR',
         help='输出目录（默认: workspace）'
     )
+
+    parser.add_argument(
+        '--pcmgr-version',
+        dest='pc_manager_version',
+        type=str,
+        default="3.19",
+        help='电脑管家版本号，用于计算转换按钮位置；3.19及以上使用 190，低于3.19 使用 210'
+    )
+
+    parser.add_argument(
+        '--done-offset',
+        dest='done_button_offset',
+        type=int,
+        default=None,
+        help='转换按钮右侧偏移量（像素）。设置后优先生效，留空则按电脑管家版本推断'
+    )
     
     args = parser.parse_args()
     
@@ -273,6 +293,8 @@ def main():
     print(f"延迟时间: {args.delay} 秒")
     print(f"超时时间: {args.timeout} 秒")
     print(f"显示尺寸: {display_width}x{display_height} (比例: {args.size_ratio})")
+    print(f"电脑管家版本: {args.pc_manager_version or '未指定 (使用偏移默认值)'}")
+    print(f"完成按钮偏移: {args.done_button_offset if args.done_button_offset is not None else '按版本自动推断'}")
     print("=" * 60)
     print()
 
@@ -285,10 +307,14 @@ def main():
         dpi=args.dpi,
         timeout=args.timeout,
         display_height=display_height,
-        display_width=display_width
+        display_width=display_width,
+        pc_manager_version=args.pc_manager_version,
+        done_button_offset=args.done_button_offset,
     )
 
     combine_ppt(ppt_dir, out_ppt_file)
+    out_ppt_file = os.path.abspath(out_ppt_file)
+    os.startfile(out_ppt_file)
     print(f"\n最终合并的PPT文件: {out_ppt_file}")
 
 

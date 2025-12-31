@@ -37,6 +37,10 @@ def pdf_to_png(pdf_path, output_dir=None, dpi=150,inpaint=False):
         
         # 保存为 PNG
         output_path = output_dir / f"page_{page_num:04d}.png"
+
+        if os.path.exists(output_path):
+            print(f"跳过已存在的文件: {output_path}")
+            continue
         pix.save(output_path)
         print(f"✓ 已保存: {output_path}")
         if inpaint:

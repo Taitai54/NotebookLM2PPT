@@ -4,5 +4,7 @@
 - 参考配置upx配置upx，用于压缩exe文件
 - 编译
 ```
-pyinstaller -F -w -n notebooklm2ppt --optimize=2 main.py 
+pyinstaller --clean -F -w -n notebooklm2ppt --optimize=2 --collect-all spire.presentation main.py 
+pyinstaller -D -w -n notebooklm2ppt --optimize=2 main.py
+pyinstaller --clean -D -w -n notebooklm2ppt --optimize=2 --collect-all spire.presentation main.py
 ```

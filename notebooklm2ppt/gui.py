@@ -131,6 +131,19 @@ class AppGUI:
         self.inpaint_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(opt_frame, text="启用图像修复 (去水印)", variable=self.inpaint_var).grid(row=1, column=2, columnspan=2, sticky=tk.W, padx=10)
 
+        ttk.Label(opt_frame, text="电脑管家版本:").grid(row=1, column=4, sticky=tk.W, padx=10)
+        self.pc_mgr_version_var = tk.StringVar(value="3.19")
+        pc_mgr_entry = ttk.Entry(opt_frame, textvariable=self.pc_mgr_version_var, width=10)
+        pc_mgr_entry.grid(row=1, column=5, sticky=tk.W, padx=5)
+        self.add_context_menu(pc_mgr_entry)
+
+        ttk.Label(opt_frame, text="转换按钮偏移:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.done_offset_var = tk.StringVar(value="")
+        done_offset_entry = ttk.Entry(opt_frame, textvariable=self.done_offset_var, width=10)
+        done_offset_entry.grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
+        self.add_context_menu(done_offset_entry)
+        ttk.Label(opt_frame, text="留空按版本自动，填数字优先使用，如果发现点不到转换按钮可以微调").grid(row=2, column=2, columnspan=4, sticky=tk.W)
+
         # Control
         ctrl_frame = ttk.Frame(main_frame, padding="10")
         ctrl_frame.pack(fill=tk.X)
@@ -199,6 +212,14 @@ class AppGUI:
             
             workspace_dir.mkdir(exist_ok=True, parents=True)
 
+            offset_raw = self.done_offset_var.get().strip()
+            done_offset = None
+            if offset_raw:
+                try:
+                    done_offset = int(offset_raw)
+                except ValueError:
+                    raise ValueError("完成按钮偏移需填写整数或留空")
+
             ratio = min(screen_width/16, screen_height/9)
             max_display_width = int(16 * ratio)
             max_display_height = int(9 * ratio)
@@ -207,6 +228,7 @@ class AppGUI:
             display_height = int(max_display_height * self.ratio_var.get())
 
             print(f"开始处理: {pdf_file}")
+            print(f"完成按钮偏移: {done_offset if done_offset is not None else '按版本自动'}")
             
             process_pdf_to_ppt(
                 pdf_path=pdf_file,
@@ -217,11 +239,16 @@ class AppGUI:
                 dpi=self.dpi_var.get(),
                 timeout=self.timeout_var.get(),
                 display_height=display_height,
-                display_width=display_width
+                display_width=display_width,
+                pc_manager_version=self.pc_mgr_version_var.get(),
+                done_button_offset=done_offset
             )
 
             combine_ppt(ppt_dir, out_ppt_file)
+            out_ppt_file = os.path.abspath(out_ppt_file)
             print(f"\n转换完成！最终文件: {out_ppt_file}")
+            # 打开该文件
+            os.startfile(out_ppt_file)
             messagebox.showinfo("成功", f"转换完成！\n文件保存至: {out_ppt_file}")
         except Exception as e:
             print(f"\n发生错误: {str(e)}")
