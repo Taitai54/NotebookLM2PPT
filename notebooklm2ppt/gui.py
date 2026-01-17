@@ -6,7 +6,7 @@ import os
 try:
     import windnd
 except ImportError:
-    print("windnd 模块未安装，拖拽功能将不可用。")
+    print("windnd module not installed, drag-and-drop functionality will not be available.")
     windnd = None
 from pathlib import Path
 from .cli import process_pdf_to_ppt
@@ -54,9 +54,9 @@ class AppGUI:
             file_path = files[0].decode('gbk') if isinstance(files[0], bytes) else files[0]
             if file_path.lower().endswith('.pdf'):
                 self.pdf_path_var.set(file_path)
-                print(f"已通过拖拽选择文件: {file_path}")
+                print(f"File selected via drag-and-drop: {file_path}")
             else:
-                messagebox.showwarning("警告", "只支持 PDF 文件")
+                messagebox.showwarning("Warning", "Only PDF files are supported")
 
     def on_closing(self):
         # Restore stdout/stderr
@@ -65,13 +65,13 @@ class AppGUI:
         self.root.destroy()
 
     def add_context_menu(self, widget):
-        """为输入框添加右键菜单（剪切、复制、粘贴、全选）"""
+        """Add right-click context menu to input fields (Cut, Copy, Paste, Select All)"""
         menu = tk.Menu(widget, tearoff=0)
-        menu.add_command(label="剪切", command=lambda: widget.event_generate("<<Cut>>"))
-        menu.add_command(label="复制", command=lambda: widget.event_generate("<<Copy>>"))
-        menu.add_command(label="粘贴", command=lambda: widget.event_generate("<<Paste>>"))
+        menu.add_command(label="Cut", command=lambda: widget.event_generate("<<Cut>>"))
+        menu.add_command(label="Copy", command=lambda: widget.event_generate("<<Copy>>"))
+        menu.add_command(label="Paste", command=lambda: widget.event_generate("<<Paste>>"))
         menu.add_separator()
-        menu.add_command(label="全选", command=lambda: widget.select_range(0, tk.END))
+        menu.add_command(label="Select All", command=lambda: widget.select_range(0, tk.END))
         
         def show_menu(event):
             menu.post(event.x_root, event.y_root)
@@ -83,25 +83,25 @@ class AppGUI:
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # File Selection
-        file_frame = ttk.LabelFrame(main_frame, text="文件设置 (支持拖拽 PDF 文件到窗口)", padding="10")
+        file_frame = ttk.LabelFrame(main_frame, text="File Settings (Drag-and-drop PDF files supported)", padding="10")
         file_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(file_frame, text="PDF 文件:").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(file_frame, text="PDF File:").grid(row=0, column=0, sticky=tk.W)
         self.pdf_path_var = tk.StringVar()
         pdf_entry = ttk.Entry(file_frame, textvariable=self.pdf_path_var, width=60)
         pdf_entry.grid(row=0, column=1, padx=5)
         self.add_context_menu(pdf_entry)
-        ttk.Button(file_frame, text="浏览", command=self.browse_pdf).grid(row=0, column=2)
+        ttk.Button(file_frame, text="Browse", command=self.browse_pdf).grid(row=0, column=2)
 
-        ttk.Label(file_frame, text="输出目录:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(file_frame, text="Output Directory:").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.output_dir_var = tk.StringVar(value="workspace")
         output_entry = ttk.Entry(file_frame, textvariable=self.output_dir_var, width=60)
         output_entry.grid(row=1, column=1, padx=5, pady=5)
         self.add_context_menu(output_entry)
-        ttk.Button(file_frame, text="浏览", command=self.browse_output).grid(row=1, column=2, pady=5)
+        ttk.Button(file_frame, text="Browse", command=self.browse_output).grid(row=1, column=2, pady=5)
 
         # Options
-        opt_frame = ttk.LabelFrame(main_frame, text="转换选项", padding="10")
+        opt_frame = ttk.LabelFrame(main_frame, text="Conversion Options", padding="10")
         opt_frame.pack(fill=tk.X, pady=5)
 
         ttk.Label(opt_frame, text="DPI:").grid(row=0, column=0, sticky=tk.W)
@@ -110,49 +110,49 @@ class AppGUI:
         dpi_entry.grid(row=0, column=1, sticky=tk.W, padx=5)
         self.add_context_menu(dpi_entry)
 
-        ttk.Label(opt_frame, text="延迟 (秒):").grid(row=0, column=2, sticky=tk.W, padx=10)
+        ttk.Label(opt_frame, text="Delay (sec):").grid(row=0, column=2, sticky=tk.W, padx=10)
         self.delay_var = tk.IntVar(value=2)
         delay_entry = ttk.Entry(opt_frame, textvariable=self.delay_var, width=10)
         delay_entry.grid(row=0, column=3, sticky=tk.W, padx=5)
         self.add_context_menu(delay_entry)
 
-        ttk.Label(opt_frame, text="超时 (秒):").grid(row=0, column=4, sticky=tk.W, padx=10)
+        ttk.Label(opt_frame, text="Timeout (sec):").grid(row=0, column=4, sticky=tk.W, padx=10)
         self.timeout_var = tk.IntVar(value=50)
         timeout_entry = ttk.Entry(opt_frame, textvariable=self.timeout_var, width=10)
         timeout_entry.grid(row=0, column=5, sticky=tk.W, padx=5)
         self.add_context_menu(timeout_entry)
 
-        ttk.Label(opt_frame, text="显示比例:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(opt_frame, text="Display Ratio:").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.ratio_var = tk.DoubleVar(value=0.8)
         ratio_entry = ttk.Entry(opt_frame, textvariable=self.ratio_var, width=10)
         ratio_entry.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
         self.add_context_menu(ratio_entry)
 
         self.inpaint_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(opt_frame, text="启用图像修复 (去水印)", variable=self.inpaint_var).grid(row=1, column=2, columnspan=2, sticky=tk.W, padx=10)
+        ttk.Checkbutton(opt_frame, text="Enable Image Inpainting (Remove Watermark)", variable=self.inpaint_var).grid(row=1, column=2, columnspan=2, sticky=tk.W, padx=10)
 
-        ttk.Label(opt_frame, text="电脑管家版本:").grid(row=1, column=4, sticky=tk.W, padx=10)
+        ttk.Label(opt_frame, text="PC Manager Version:").grid(row=1, column=4, sticky=tk.W, padx=10)
         self.pc_mgr_version_var = tk.StringVar(value="3.19")
         pc_mgr_entry = ttk.Entry(opt_frame, textvariable=self.pc_mgr_version_var, width=10)
         pc_mgr_entry.grid(row=1, column=5, sticky=tk.W, padx=5)
         self.add_context_menu(pc_mgr_entry)
 
-        ttk.Label(opt_frame, text="转换按钮偏移:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        ttk.Label(opt_frame, text="Done Button Offset:").grid(row=2, column=0, sticky=tk.W, pady=5)
         self.done_offset_var = tk.StringVar(value="")
         done_offset_entry = ttk.Entry(opt_frame, textvariable=self.done_offset_var, width=10)
         done_offset_entry.grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
         self.add_context_menu(done_offset_entry)
-        ttk.Label(opt_frame, text="留空按版本自动，填数字优先使用，如果发现点不到转换按钮可以微调").grid(row=2, column=2, columnspan=4, sticky=tk.W)
+        ttk.Label(opt_frame, text="Leave empty for auto, or enter a number to fine-tune if the Done button is not being clicked").grid(row=2, column=2, columnspan=4, sticky=tk.W)
 
         # Control
         ctrl_frame = ttk.Frame(main_frame, padding="10")
         ctrl_frame.pack(fill=tk.X)
 
-        self.start_btn = ttk.Button(ctrl_frame, text="开始转换", command=self.start_conversion)
+        self.start_btn = ttk.Button(ctrl_frame, text="Start Conversion", command=self.start_conversion)
         self.start_btn.pack(side=tk.LEFT, padx=5)
 
         # Log Area
-        log_frame = ttk.LabelFrame(main_frame, text="日志输出", padding="5")
+        log_frame = ttk.LabelFrame(main_frame, text="Log Output", padding="5")
         log_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         self.log_area = scrolledtext.ScrolledText(log_frame, state='disabled', height=15)
@@ -160,13 +160,13 @@ class AppGUI:
         self.log_area.tag_config("stderr", foreground="red")
 
     def browse_pdf(self):
-        # 清理路径中的引号和空格，方便用户直接粘贴带引号的路径
+        # Clean up quotes and spaces in the path, convenient for users pasting paths with quotes
         current_path = self.pdf_path_var.get().strip().strip('"')
         initial_dir = os.path.dirname(current_path) if current_path and os.path.exists(os.path.dirname(current_path)) else None
         
         filename = filedialog.askopenfilename(
             parent=self.root,
-            title="选择 PDF 文件",
+            title="Select PDF File",
             initialdir=initial_dir,
             filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
         )
@@ -174,13 +174,13 @@ class AppGUI:
             self.pdf_path_var.set(filename)
 
     def browse_output(self):
-        # 清理路径中的引号和空格
+        # Clean up quotes and spaces in the path
         current_dir = self.output_dir_var.get().strip().strip('"')
         initial_dir = current_dir if current_dir and os.path.exists(current_dir) else None
         
         directory = filedialog.askdirectory(
             parent=self.root,
-            title="选择输出目录",
+            title="Select Output Directory",
             initialdir=initial_dir
         )
         if directory:
@@ -195,7 +195,7 @@ class AppGUI:
         self.output_dir_var.set(output_dir)
 
         if not pdf_path or not os.path.exists(pdf_path):
-            messagebox.showerror("错误", "请选择有效的 PDF 文件")
+            messagebox.showerror("Error", "Please select a valid PDF file")
             return
 
         self.start_btn.config(state=tk.DISABLED)
@@ -218,7 +218,7 @@ class AppGUI:
                 try:
                     done_offset = int(offset_raw)
                 except ValueError:
-                    raise ValueError("完成按钮偏移需填写整数或留空")
+                    raise ValueError("Done button offset must be an integer or left empty")
 
             ratio = min(screen_width/16, screen_height/9)
             max_display_width = int(16 * ratio)
@@ -227,8 +227,8 @@ class AppGUI:
             display_width = int(max_display_width * self.ratio_var.get())
             display_height = int(max_display_height * self.ratio_var.get())
 
-            print(f"开始处理: {pdf_file}")
-            print(f"完成按钮偏移: {done_offset if done_offset is not None else '按版本自动'}")
+            print(f"Starting to process: {pdf_file}")
+            print(f"Done button offset: {done_offset if done_offset is not None else 'auto by version'}")
             
             process_pdf_to_ppt(
                 pdf_path=pdf_file,
@@ -246,13 +246,13 @@ class AppGUI:
 
             combine_ppt(ppt_dir, out_ppt_file)
             out_ppt_file = os.path.abspath(out_ppt_file)
-            print(f"\n转换完成！最终文件: {out_ppt_file}")
-            # 打开该文件
+            print(f"\nConversion complete! Final file: {out_ppt_file}")
+            # Open the file
             os.startfile(out_ppt_file)
-            messagebox.showinfo("成功", f"转换完成！\n文件保存至: {out_ppt_file}")
+            messagebox.showinfo("Success", f"Conversion complete!\nFile saved to: {out_ppt_file}")
         except Exception as e:
-            print(f"\n发生错误: {str(e)}")
-            messagebox.showerror("错误", f"转换过程中发生错误: {str(e)}")
+            print(f"\nError occurred: {str(e)}")
+            messagebox.showerror("Error", f"An error occurred during conversion: {str(e)}")
         finally:
             self.start_btn.config(state=tk.NORMAL)
 

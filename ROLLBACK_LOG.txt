@@ -1,0 +1,16 @@
+# Rollback Log - v2 (Post Code Review)
+# Date: 2026-01-17
+# 
+# BACKUP FILES:
+# - notebooklm2ppt/ocr_converter_backup.py (previous version)
+# - notebooklm2ppt/ppt_generator_backup.py (previous version)
+#
+# TO ROLLBACK:
+# Copy-Item "notebooklm2ppt\ocr_converter_backup.py" "notebooklm2ppt\ocr_converter.py" -Force
+# Copy-Item "notebooklm2ppt\ppt_generator_backup.py" "notebooklm2ppt\ppt_generator.py" -Force
+#
+# CHANGES IN THIS VERSION:
+# 1. Store original box AND padded box separately
+# 2. Use original box for overlap detection (not padded)
+# 3. Skip extracting complex diagrams with >3 text blocks inside
+# 4. Simpler text grouping (no merge if gaps between lines)

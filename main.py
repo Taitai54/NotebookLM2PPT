@@ -1,4 +1,4 @@
-"""主程序：将 PDF 转换为 PNG 图片，然后逐张调用截图工具进行处理"""
+"""Main program: Convert PDF to PNG images, then process each image with the screenshot tool"""
 
 import dis
 import os

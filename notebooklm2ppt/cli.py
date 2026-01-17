@@ -1,4 +1,4 @@
-"""命令行界面：将 PDF 转换为可编辑 PowerPoint 演示文稿"""
+"""CLI: Convert PDF to editable PowerPoint presentations"""
 
 import os
 import time
@@ -16,79 +16,79 @@ from .ppt_combiner import combine_ppt
 
 def process_pdf_to_ppt(pdf_path, png_dir, ppt_dir, delay_between_images=2, inpaint=True, dpi=150, timeout=50, display_height=None, display_width=None, pc_manager_version=None, done_button_offset=None):
     """
-    将 PDF 转换为 PNG 图片，然后对每张图片进行截图处理
+    Convert PDF to PNG images, then process each image with screenshot capture.
     
-    参数:
-        pdf_path: PDF 文件路径
-        png_dir: PNG 输出目录
-        ppt_dir: PPT 输出目录
-        delay_between_images: 处理每张图片之间的延迟（秒），默认 2
-        inpaint: 是否启用图像修复（去水印），默认 True
-        dpi: PNG 输出分辨率，默认 150
-        timeout: PPT 窗口检测超时时间（秒），默认 50
-        display_height: 显示窗口高度（像素），默认 None 使用屏幕高度
-        display_width: 显示窗口宽度（像素），默认 None 使用屏幕宽度
-        pc_manager_version: 电脑管家版本号；3.19及以上自动使用 190，低于3.19 使用 210
-        done_button_offset: 完成按钮右侧偏移量，传入数字时优先使用，不传则按版本推断
+    Args:
+        pdf_path: Path to the PDF file
+        png_dir: Output directory for PNG images
+        ppt_dir: Output directory for PPT files
+        delay_between_images: Delay between processing each image (seconds), default 2
+        inpaint: Enable image inpainting (watermark removal), default True
+        dpi: PNG output resolution, default 150
+        timeout: PPT window detection timeout (seconds), default 50
+        display_height: Display window height (pixels), default None uses screen height
+        display_width: Display window width (pixels), default None uses screen width
+        pc_manager_version: PC Manager version; 3.19+ uses 190, below 3.19 uses 210
+        done_button_offset: Done button right offset; takes priority if specified
     """
-    # 1. 将 PDF 转换为 PNG 图片
+    # 1. Convert PDF to PNG images
     print("=" * 60)
-    print("步骤 1: 将 PDF 转换为 PNG 图片")
+    print("Step 1: Converting PDF to PNG images")
     print("=" * 60)
     
     if not os.path.exists(pdf_path):
-        print(f"错误: PDF 文件 {pdf_path} 不存在")
+        print(f"Error: PDF file {pdf_path} does not exist")
         return
     
     pdf_to_png(pdf_path, png_dir, dpi=dpi, inpaint=inpaint)
     
-    # 创建ppt输出目录
+    # Create PPT output directory
     ppt_dir.mkdir(exist_ok=True, parents=True)
-    print(f"PPT输出目录: {ppt_dir}")
+    print(f"PPT output directory: {ppt_dir}")
     
-    # 获取用户的下载文件夹路径
+    # Get user's Downloads folder path
     downloads_folder = Path.home() / "Downloads"
-    print(f"下载文件夹: {downloads_folder}")
+    print(f"Downloads folder: {downloads_folder}")
     
-    # 2. 获取所有 PNG 图片文件并排序
+    # 2. Get all PNG image files and sort them
     png_files = sorted(png_dir.glob("page_*.png"))
     
     if not png_files:
-        print(f"错误: 在 {png_dir} 中没有找到 PNG 图片")
+        print(f"Error: No PNG images found in {png_dir}")
         return
     
     print("\n" + "=" * 60)
-    print(f"步骤 2: 处理 {len(png_files)} 张 PNG 图片")
+    print(f"Step 2: Processing {len(png_files)} PNG images")
     print("=" * 60)
     
-    # 设置显示窗口尺寸（如果未指定则使用屏幕尺寸）
+    # Set display window size (use screen size if not specified)
     if display_height is None:
         display_height = screen_height
     if display_width is None:
         display_width = screen_width
     
-    print(f"显示窗口尺寸: {display_width} x {display_height}")
+    print(f"Display window size: {display_width} x {display_height}")
 
     
-    # 3. 对每张图片进行截图处理
+    # 3. Process each image with screenshot capture
     for idx, png_file in enumerate(png_files, 1):
-        print(f"\n[{idx}/{len(png_files)}] 处理图片: {png_file.name}")
+        print(f"\n[{idx}/{len(png_files)}] Processing image: {png_file.name}")
         
         stop_event = threading.Event()
         
         def _viewer():
-            """在线程中显示图片"""
+            """Display image in thread"""
             show_image_fullscreen(str(png_file), display_height=display_height)
-            # 维持 OpenCV 事件循环
+            # Maintain OpenCV event loop
             while not stop_event.is_set():
                 cv2.waitKey(50)
-            # 关闭窗口
+            # Close window
             try:
                 cv2.destroyAllWindows()
             except Exception:
                 pass
         
-        # 启动图片显示线程
+        # Start image display thread
         viewer_thread = threading.Thread(
             target=_viewer, 
             name=f"opencv_viewer_{idx}", 
@@ -96,11 +96,11 @@ def process_pdf_to_ppt(pdf_path, png_dir, ppt_dir, delay_between_images=2, inpai
         )
         viewer_thread.start()
         
-        # 等待窗口稳定
+        # Wait for window to stabilize
         time.sleep(3)
         
         try:
-            # 执行全屏截图并检测PPT窗口
+            # Take fullscreen screenshot and detect PPT window
             success, ppt_filename = take_fullscreen_snip(
                 check_ppt_window=True,
                 ppt_check_timeout=timeout,
@@ -110,9 +110,9 @@ def process_pdf_to_ppt(pdf_path, png_dir, ppt_dir, delay_between_images=2, inpai
                 done_button_right_offset=done_button_offset,
             )
             if success and ppt_filename:
-                print(f"✓ 图片 {png_file.name} 处理完成，PPT窗口已创建: {ppt_filename}")
+                print(f"OK - Image {png_file.name} processed, PPT window created: {ppt_filename}")
                 
-                # 从下载文件夹查找并复制PPT文件
+                # Find and copy PPT file from Downloads folder
                 if " - PowerPoint" in ppt_filename:
                     base_filename = ppt_filename.replace(" - PowerPoint", "").strip()
                 else:
@@ -126,71 +126,71 @@ def process_pdf_to_ppt(pdf_path, png_dir, ppt_dir, delay_between_images=2, inpai
                 ppt_source_path = downloads_folder / search_filename
                 
                 if not ppt_source_path.exists():
-                    print(f"  未找到 {ppt_source_path}，尝试查找最近的.pptx文件...")
+                    print(f"  Not found: {ppt_source_path}, searching for recent .pptx files...")
                     pptx_files = list(downloads_folder.glob("*.pptx"))
                     if pptx_files:
                         pptx_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
                         ppt_source_path = pptx_files[0]
-                        print(f"  找到最近的PPT文件: {ppt_source_path.name}")
+                        print(f"  Found recent PPT file: {ppt_source_path.name}")
                 
                 if ppt_source_path.exists():
                     target_filename = png_file.stem + ".pptx"
                     target_path = ppt_dir / target_filename
                     
                     shutil.copy2(ppt_source_path, target_path)
-                    print(f"  ✓ PPT文件已复制: {target_path}")
+                    print(f"  OK - PPT file copied: {target_path}")
                     
                     try:
                         ppt_source_path.unlink()
-                        print(f"  ✓ 已删除原文件: {ppt_source_path}")
+                        print(f"  OK - Deleted source file: {ppt_source_path}")
                     except Exception as e:
-                        print(f"  ⚠ 删除原文件失败: {e}")
+                        print(f"  WARNING - Failed to delete source file: {e}")
                 else:
-                    print(f"  ⚠ 未在下载文件夹中找到PPT文件")
+                    print(f"  WARNING - PPT file not found in Downloads folder")
             elif success:
-                print(f"✓ 图片 {png_file.name} 处理完成，但未获取到PPT文件名")
+                print(f"OK - Image {png_file.name} processed, but PPT filename not retrieved")
             else:
-                print(f"⚠ 图片 {png_file.name} 已截图，但未检测到新的PPT窗口")
+                print(f"WARNING - Image {png_file.name} captured, but no new PPT window detected")
                 close_button = (display_width - 35, display_height + 35)
                 mouse.click(button='left', coords=close_button)
         except Exception as e:
-            print(f"✗ 处理图片 {png_file.name} 时出错: {e}")
+            print(f"ERROR - Failed to process image {png_file.name}: {e}")
         finally:
             stop_event.set()
             viewer_thread.join(timeout=2)
         
         if idx < len(png_files):
-            print(f"等待 {delay_between_images} 秒后处理下一张...")
+            print(f"Waiting {delay_between_images} seconds before processing next image...")
             time.sleep(delay_between_images)
     
     print("\n" + "=" * 60)
-    print(f"完成! 共处理 {len(png_files)} 张图片")
+    print(f"Done! Processed {len(png_files)} images")
     print("=" * 60)
 
 
 def main():
-    # 如果没有参数，或者第一个参数是 --gui，则启动 GUI
+    # If no arguments or first argument is --gui, launch GUI
     if len(sys.argv) == 1 or (len(sys.argv) > 1 and sys.argv[1] == "--gui"):
         from .gui import launch_gui
         launch_gui()
         return
 
-    # 解析命令行参数
+    # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description='NotebookLM2PPT - 将 PDF 转换为可编辑 PowerPoint 演示文稿',
+        description='NotebookLM2PPT - Convert PDF to editable PowerPoint presentations',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-使用示例:
-  notebooklm2ppt examples/demo.pdf                  # 转换指定PDF
-  notebooklm2ppt examples/demo.pdf --no-inpaint     # 禁用图像修复（去水印）
-  notebooklm2ppt examples/demo.pdf -d 3 -t 60       # 设置延迟和超时
-  notebooklm2ppt -s 0.9 examples/demo.pdf           # 设置显示尺寸比例
+Examples:
+  notebooklm2ppt examples/demo.pdf                  # Convert specified PDF
+  notebooklm2ppt examples/demo.pdf --no-inpaint     # Disable image inpainting (watermark removal)
+  notebooklm2ppt examples/demo.pdf -d 3 -t 60       # Set delay and timeout
+  notebooklm2ppt -s 0.9 examples/demo.pdf           # Set display size ratio
         """
     )
     
     parser.add_argument(
         'pdf_file',
-        help='PDF 文件路径'
+        help='Path to PDF file'
     )
     
     parser.add_argument(
@@ -198,7 +198,7 @@ def main():
         type=float,
         default=2,
         metavar='SECONDS',
-        help='处理每张图片之间的延迟时间，单位秒（默认: 2）'
+        help='Delay between processing each image in seconds (default: 2)'
     )
     
     parser.add_argument(
@@ -206,21 +206,21 @@ def main():
         type=float,
         default=50,
         metavar='SECONDS',
-        help='PPT 窗口检测超时时间，单位秒（默认: 50）'
+        help='PPT window detection timeout in seconds (default: 50)'
     )
     
     parser.add_argument(
         '--inpaint-notebooklm',
         dest='inpaint',
         action='store_true',
-        help='启用图像修复功能（去水印），只能去除notebooklm生成的水印'
+        help='Enable image inpainting (watermark removal), only removes NotebookLM watermarks'
     )
     
     parser.add_argument(
         '--no-inpaint',
         dest='inpaint',
         action='store_false',
-        help='禁用图像修复功能'
+        help='Disable image inpainting'
     )
 
     parser.add_argument(
@@ -228,7 +228,7 @@ def main():
         type=int,
         default=150,
         metavar='DPI',
-        help='PNG 输出分辨率，必须为150以启用图像修复（默认: 150）'
+        help='PNG output resolution, must be 150 to enable inpainting (default: 150)'
     )
     
     parser.set_defaults(inpaint=True)
@@ -238,13 +238,13 @@ def main():
         type=float,
         default=0.8,
         metavar='RATIO',
-        help='显示尺寸比例，1.0 表示填满屏幕（默认: 0.8），如果转换失败，可尝试调小此值重试'
+        help='Display size ratio, 1.0 fills the screen (default: 0.8). Try reducing if conversion fails'
     )
     
     parser.add_argument(
         '-o', '--output',
         metavar='DIR',
-        help='输出目录（默认: workspace）'
+        help='Output directory (default: workspace)'
     )
 
     parser.add_argument(
@@ -252,7 +252,7 @@ def main():
         dest='pc_manager_version',
         type=str,
         default="3.19",
-        help='电脑管家版本号，用于计算转换按钮位置；3.19及以上使用 190，低于3.19 使用 210'
+        help='PC Manager version for button position calculation; 3.19+ uses 190, below uses 210'
     )
 
     parser.add_argument(
@@ -260,22 +260,107 @@ def main():
         dest='done_button_offset',
         type=int,
         default=None,
-        help='转换按钮右侧偏移量（像素）。设置后优先生效，留空则按电脑管家版本推断'
+        help='Done button right offset (pixels). Takes priority when set, otherwise inferred from PC Manager version'
+    )
+    
+    parser.add_argument(
+        '--ocr',
+        action='store_true',
+        help='Use OCR mode: Reconstructs slides by lifting text into editable boxes and cleaning the background (Best for flattened PDFs)'
+    )
+    
+    parser.add_argument(
+        '--api-key',
+        dest='api_key',
+        type=str,
+        default=None,
+        help='Google Gemini API key for Vision-based text extraction (improves accuracy). Can also be set via GEMINI_API_KEY env var'
     )
     
     args = parser.parse_args()
     
-    # 配置参数
+    # Configure parameters
     pdf_file = args.pdf_file
     pdf_name = Path(pdf_file).stem
     
-    # 定义目录
+    # Define directories
     workspace_dir = Path(args.output) if args.output else Path("workspace")
     png_dir = workspace_dir / f"{pdf_name}_pngs"
     ppt_dir = workspace_dir / f"{pdf_name}_ppt"
     out_ppt_file = workspace_dir / f"{pdf_name}.pptx"
     workspace_dir.mkdir(exist_ok=True, parents=True)
 
+    if args.ocr:
+        # OCR Mode
+        print("=" * 60)
+        print("NotebookLM2PPT - OCR Mode")
+        print("=" * 60)
+        print(f"PDF File: {pdf_file}")
+        print(f"Output: {out_ppt_file}")
+        
+        # 1. Convert PDF to PNGs
+        print(f"Converting PDF to PNGs (Restoring 'Golden' Standard Res)...")
+        pdf_to_png(pdf_file, png_dir, dpi=args.dpi, inpaint=False)
+        
+        # 2. Process with OCR and Reconstruct
+        from .ocr_converter import SlideReconstructor
+        from .ppt_generator import PPTCreator
+        
+        # Use Gemini Vision API if key is provided
+        api_key = args.api_key
+        if api_key:
+            print(f"Using Gemini Vision API for text extraction")
+        else:
+            import os
+            if os.environ.get('GEMINI_API_KEY'):
+                print(f"Using Gemini Vision API (from GEMINI_API_KEY env var)")
+            else:
+                print(f"Note: For better text extraction, provide --api-key for Gemini Vision API")
+        
+        reconstructor = SlideReconstructor(api_key=api_key)
+        ppt_creator = PPTCreator()
+        
+        import re
+        all_pngs = sorted(png_dir.glob("page_*.png"))
+        # Filter to only keep original pages "page_XXXX.png" matching 4 digits
+        # This prevents processing the extracted clips like "page_0001_img_01.png"
+        png_files = [p for p in all_pngs if re.match(r"page_\d{4}\.png", p.name)]
+        
+        print(f"\nProcessing {len(png_files)} pages with OCR...")
+        
+        for idx, png_file in enumerate(png_files, 1):
+            print(f"[{idx}/{len(png_files)}] Processing {png_file.name}...")
+            
+            # Run OCR and Inpainting
+            # We pass png_dir so it can save extracted images there
+            result = reconstructor.process_image(png_file, output_dir=png_dir)
+            
+            # Save clean background (optional, for debug or cache)
+            # We can use a temporary path or keep it in memory. 
+            # PPTX needs a file path usually.
+            clean_bg_path = png_dir / f"{png_file.stem}_clean.jpg"
+            cv2.imwrite(str(clean_bg_path), result["clean_image"])
+            
+            # Add to PPT
+            img_h, img_w = result["clean_image"].shape[:2]
+            ppt_creator.add_slide(
+                str(clean_bg_path), 
+                result["text_blocks"], 
+                result["image_objects"],
+                (img_w, img_h)
+            )
+            
+        ppt_creator.save(out_ppt_file)
+        
+        print("\n" + "=" * 60)
+        print(f"Done! PPT saved to: {out_ppt_file}")
+        print("=" * 60)
+        
+        out_ppt_file = os.path.abspath(out_ppt_file)
+        os.startfile(out_ppt_file)
+        return
+
+    # Default Logic (Screenshot based)
     ratio = min(screen_width/16, screen_height/9)
     max_display_width = int(16 * ratio)
     max_display_height = int(9 * ratio)
@@ -284,17 +369,17 @@ def main():
     display_height = int(max_display_height * args.size_ratio)
     
     print("=" * 60)
-    print("NotebookLM2PPT - 将 PDF 转换为可编辑 PowerPoint 演示文稿")
+    print("NotebookLM2PPT - Screenshot Mode (Legacy)")
     print("=" * 60)
-    print(f"PDF 文件: {pdf_file}")
-    print(f"输出目录: {workspace_dir}")
-    print(f"图像修复（去水印）: {'启用' if args.inpaint else '禁用'}")
+    print(f"PDF file: {pdf_file}")
+    print(f"Output directory: {workspace_dir}")
+    print(f"Image inpainting (watermark removal): {'Enabled' if args.inpaint else 'Disabled'}")
     print(f"DPI: {args.dpi}")
-    print(f"延迟时间: {args.delay} 秒")
-    print(f"超时时间: {args.timeout} 秒")
-    print(f"显示尺寸: {display_width}x{display_height} (比例: {args.size_ratio})")
-    print(f"电脑管家版本: {args.pc_manager_version or '未指定 (使用偏移默认值)'}")
-    print(f"完成按钮偏移: {args.done_button_offset if args.done_button_offset is not None else '按版本自动推断'}")
+    print(f"Delay: {args.delay} seconds")
+    print(f"Timeout: {args.timeout} seconds")
+    print(f"Display size: {display_width}x{display_height} (ratio: {args.size_ratio})")
+    print(f"PC Manager version: {args.pc_manager_version or 'Not specified (using default offset)'}")
+    print(f"Done button offset: {args.done_button_offset if args.done_button_offset is not None else 'Auto-inferred from version'}")
     print("=" * 60)
     print()
 
@@ -315,7 +400,7 @@ def main():
     combine_ppt(ppt_dir, out_ppt_file)
     out_ppt_file = os.path.abspath(out_ppt_file)
     os.startfile(out_ppt_file)
-    print(f"\n最终合并的PPT文件: {out_ppt_file}")
+    print(f"\nFinal merged PPT file: {out_ppt_file}")
 
 
 if __name__ == "__main__":
