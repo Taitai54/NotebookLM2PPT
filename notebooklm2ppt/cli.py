@@ -303,53 +303,54 @@ Examples:
         pdf_to_png(pdf_file, png_dir, dpi=args.dpi, inpaint=False)
         
         # 2. Process with OCR and Reconstruct
-        from .ocr_converter import SlideReconstructor
+        # 2. Process with Direct PDF Extraction (PyMuPDF)
+        from .direct_extractor import DirectSlideExtractor
         from .ppt_generator import PPTCreator
         
-        # Use Gemini Vision API if key is provided
-        api_key = args.api_key
-        if api_key:
-            print(f"Using Gemini Vision API for text extraction")
-        else:
-            import os
-            if os.environ.get('GEMINI_API_KEY'):
-                print(f"Using Gemini Vision API (from GEMINI_API_KEY env var)")
-            else:
-                print(f"Note: For better text extraction, provide --api-key for Gemini Vision API")
+        print(f"Using Direct PDF Extraction (PyMuPDF)")
+        print(f"   - Extracts text vectors directly from PDF structure")
+        print(f"   - Filters hidden/duplicate OCR text layers")
+        print(f"   - Uses precise coordinate mapping")
         
-        reconstructor = SlideReconstructor(api_key=api_key)
+        extractor = DirectSlideExtractor()
         ppt_creator = PPTCreator()
         
         import re
         all_pngs = sorted(png_dir.glob("page_*.png"))
-        # Filter to only keep original pages "page_XXXX.png" matching 4 digits
-        # This prevents processing the extracted clips like "page_0001_img_01.png"
         png_files = [p for p in all_pngs if re.match(r"page_\d{4}\.png", p.name)]
         
-        print(f"\nProcessing {len(png_files)} pages with OCR...")
+        print(f"\nProcessing {len(png_files)} pages...")
         
-        for idx, png_file in enumerate(png_files, 1):
-            print(f"[{idx}/{len(png_files)}] Processing {png_file.name}...")
+        for idx, png_file in enumerate(png_files):
+            print(f"[{idx+1}/{len(png_files)}] Processing {png_file.name}...")
             
-            # Run OCR and Inpainting
-            # We pass png_dir so it can save extracted images there
-            result = reconstructor.process_image(png_file, output_dir=png_dir)
-            
-            # Save clean background (optional, for debug or cache)
-            # We can use a temporary path or keep it in memory. 
-            # PPTX needs a file path usually.
-            clean_bg_path = png_dir / f"{png_file.stem}_clean.jpg"
-            cv2.imwrite(str(clean_bg_path), result["clean_image"])
-            
-            # Add to PPT
-            img_h, img_w = result["clean_image"].shape[:2]
-            ppt_creator.add_slide(
-                str(clean_bg_path), 
-                result["text_blocks"], 
-                result["image_objects"],
-                (img_w, img_h)
-            )
-            
+            try:
+                # Direct Extraction (uses PDF for text, Image for bg)
+                slide_data = extractor.process_page(
+                    pdf_path=pdf_file, # Needs PDF path now!
+                    image_path=str(png_file), 
+                    output_dir=png_dir,
+                    page_num=idx
+                )
+                
+                # Save clean background for PPT
+                clean_bg_path = png_dir / f"{png_file.stem}_clean.jpg"
+                cv2.imwrite(str(clean_bg_path), slide_data["clean_image"])
+                
+                # Add to PPT
+                img_h, img_w = slide_data["clean_image"].shape[:2]
+                ppt_creator.add_slide(
+                    str(clean_bg_path), 
+                    slide_data["text_blocks"], 
+                    slide_data["image_objects"],
+                    (img_w, img_h)
+                )
+                
+            except Exception as e:
+                print(f"Error processing page {idx}: {e}")
+                import traceback
+                traceback.print_exc()
+        
         ppt_creator.save(out_ppt_file)
         
         print("\n" + "=" * 60)

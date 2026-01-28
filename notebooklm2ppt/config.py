@@ -22,7 +22,7 @@ except ImportError:
 
 # Google Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = "gemini-2.0-flash-exp"  # Latest vision model
+GEMINI_MODEL = "gemini-2.0-flash"  # Stable vision model
 
 # Vision API confidence threshold
 VISION_CONFIDENCE_THRESHOLD = 0.75
@@ -107,7 +107,7 @@ IMAGE_OBJECT_PADDING = 10
 # Processing timeouts
 VISION_API_TIMEOUT = 30       # seconds
 MAX_RETRIES_ON_RATE_LIMIT = 3
-RETRY_DELAY_SECONDS = 60
+RETRY_DELAY_SECONDS = 15       # Base delay for rate limit retries (exponential backoff applied)
 
 # Async settings
 MAX_CONCURRENT_PAGES = 5

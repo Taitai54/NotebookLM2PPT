@@ -83,7 +83,7 @@ class PPTCreator:
         Uses a heuristic scaling based on image dimensions.
         """
         # Heuristic: scale based on image height to slide height ratio
-        # Then apply adjustment factor (0.95) to prevent overflow
+        # Adjusted to 0.95 to match original layout better after Smart Merging
         pt_size = (font_size_px / img_height) * 7.5 * 72 * 0.95
         
         # Clamp to reasonable range
