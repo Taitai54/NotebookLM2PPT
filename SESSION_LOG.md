@@ -22,7 +22,7 @@ Restructured the codebase to follow `NotebookLM-PPTX-Spec.md` best practices:
 ### 2. Test Conversion Performed
 - **PDF:** `C:\Users\matti\Downloads\AI_Health_Implementation_North_Star updated.pdf`
 - **Output:** `workspace\AI_Health_Implementation_North_Star updated.pptx`
-- **API:** Gemini Vision API used with key `AIzaSyBXE1BpvS9Tv-RZf9Wywb0F6IsWEAF53YQ`
+- **API:** Gemini Vision API used (key from `GEMINI_API_KEY` environment variable)
 - **Result:** Conversion completed (exit code 0)
 
 ---
@@ -43,7 +43,7 @@ Restructured the codebase to follow `NotebookLM-PPTX-Spec.md` best practices:
 ### Quick Start Command
 ```powershell
 cd c:\Users\matti\OneDrive\Documents\GitHub\NotebookLM2PPT
-$env:GEMINI_API_KEY = 'AIzaSyBXE1BpvS9Tv-RZf9Wywb0F6IsWEAF53YQ'
+$env:GEMINI_API_KEY = 'YOUR_API_KEY_HERE'  # Get from https://aistudio.google.com/
 python -m notebooklm2ppt "your-pdf.pdf" --ocr --dpi 150
 ```
 
