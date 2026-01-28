@@ -4,6 +4,7 @@ import threading
 import sys
 import os
 import cv2
+import numpy as np
 try:
     import windnd
 except ImportError:
@@ -185,6 +186,46 @@ class AppGUI:
             foreground="#666666"
         ).pack(side=tk.LEFT, padx=(10, 0))
 
+        # ============ OUTPUT TYPE ============
+        output_type_frame = ttk.LabelFrame(main_frame, text="📄 Output Type", padding="10")
+        output_type_frame.pack(fill=tk.X, pady=5)
+        
+        self.output_type_var = tk.StringVar(value="simple")  # Default to simple
+        
+        # Simple Output
+        simple_frame = ttk.Frame(output_type_frame)
+        simple_frame.pack(fill=tk.X)
+        
+        ttk.Radiobutton(
+            simple_frame, 
+            text="📷 Simple (Images)", 
+            variable=self.output_type_var, 
+            value="simple"
+        ).pack(side=tk.LEFT)
+        
+        ttk.Label(
+            simple_frame, 
+            text="— Fast, preserves exact layout. Text is part of images.",
+            foreground="#666666"
+        ).pack(side=tk.LEFT, padx=(10, 0))
+        
+        # Complex Output
+        complex_frame = ttk.Frame(output_type_frame)
+        complex_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        ttk.Radiobutton(
+            complex_frame, 
+            text="✏️ Complex (Editable)", 
+            variable=self.output_type_var, 
+            value="complex"
+        ).pack(side=tk.LEFT)
+        
+        ttk.Label(
+            complex_frame, 
+            text="— Editable text boxes + separate images. Better for editing.",
+            foreground="#666666"
+        ).pack(side=tk.LEFT, padx=(10, 0))
+
         # ============ OPTIONS ============
         opt_frame = ttk.LabelFrame(main_frame, text="Conversion Options", padding="10")
         opt_frame.pack(fill=tk.X, pady=5)
@@ -332,12 +373,16 @@ class AppGUI:
             pdf_name = Path(pdf_file).stem
             workspace_dir = Path(self.output_dir_var.get())
             png_dir = workspace_dir / f"{pdf_name}_pngs"
-            out_ppt_file = workspace_dir / f"{pdf_name}.pptx"
+            
+            output_type = self.output_type_var.get()
+            suffix = "_simple" if output_type == "simple" else "_complex"
+            out_ppt_file = workspace_dir / f"{pdf_name}{suffix}.pptx"
             
             workspace_dir.mkdir(exist_ok=True, parents=True)
             
+            mode_name = "Simple (Image-based)" if output_type == "simple" else "Complex (Editable Text)"
             print("=" * 60)
-            print("NotebookLM2PPT - Background Mode (OCR/Direct Extraction)")
+            print(f"NotebookLM2PPT - {mode_name}")
             print("=" * 60)
             print(f"PDF File: {pdf_file}")
             print(f"Output: {out_ppt_file}")
@@ -348,39 +393,65 @@ class AppGUI:
             print("Step 1: Converting PDF to PNG images...")
             pdf_to_png(pdf_file, png_dir, dpi=self.dpi_var.get(), inpaint=False)
             
-            # 2. Process with Direct PDF Extraction
-            print("\nStep 2: Extracting text and images from PDF...")
+            # 2. Process slides based on output type
             extractor = DirectSlideExtractor()
             ppt_creator = PPTCreator()
             
             all_pngs = sorted(png_dir.glob("page_*.png"))
             png_files = [p for p in all_pngs if re.match(r"page_\d{4}\.png", p.name)]
             
-            print(f"\nProcessing {len(png_files)} pages...")
+            print(f"\nProcessing {len(png_files)} pages ({output_type} mode)...")
             
             for idx, png_file in enumerate(png_files):
                 print(f"[{idx+1}/{len(png_files)}] Processing {png_file.name}...")
                 
                 try:
-                    slide_data = extractor.process_page(
-                        pdf_path=pdf_file,
-                        image_path=str(png_file),
-                        output_dir=png_dir,
-                        page_num=idx
-                    )
-                    
-                    # Save clean background
-                    clean_bg_path = png_dir / f"{png_file.stem}_clean.jpg"
-                    cv2.imwrite(str(clean_bg_path), slide_data["clean_image"])
-                    
-                    # Add to PPT
-                    img_h, img_w = slide_data["clean_image"].shape[:2]
-                    ppt_creator.add_slide(
-                        str(clean_bg_path),
-                        slide_data["text_blocks"],
-                        slide_data["image_objects"],
-                        (img_w, img_h)
-                    )
+                    if output_type == "simple":
+                        # SIMPLE MODE: Just use original image as background
+                        # No text extraction, preserves exact layout
+                        img = cv2.imread(str(png_file))
+                        img_h, img_w = img.shape[:2]
+                        
+                        # Apply NotebookLM icon removal to original image
+                        icon_left = int(0.91 * img_w)
+                        icon_top = int(0.95 * img_h)
+                        mask = np.zeros((img_h, img_w), dtype=np.uint8)
+                        mask[icon_top:, icon_left:] = 255
+                        clean_img = cv2.inpaint(img, mask, 3, cv2.INPAINT_NS)
+                        
+                        # Save cleaned original as background
+                        clean_bg_path = png_dir / f"{png_file.stem}_simple.jpg"
+                        cv2.imwrite(str(clean_bg_path), clean_img)
+                        
+                        # Add slide with just the image (no text boxes)
+                        ppt_creator.add_slide(
+                            str(clean_bg_path),
+                            [],  # No text blocks
+                            [],  # No image objects
+                            (img_w, img_h)
+                        )
+                    else:
+                        # COMPLEX MODE: Full extraction with editable text
+                        slide_data = extractor.process_page(
+                            pdf_path=pdf_file,
+                            image_path=str(png_file),
+                            output_dir=png_dir,
+                            page_num=idx
+                        )
+                        
+                        # Save clean background
+                        clean_bg_path = png_dir / f"{png_file.stem}_clean.jpg"
+                        cv2.imwrite(str(clean_bg_path), slide_data["clean_image"])
+                        
+                        # Add to PPT with text boxes and image objects
+                        img_h, img_w = slide_data["clean_image"].shape[:2]
+                        ppt_creator.add_slide(
+                            str(clean_bg_path),
+                            slide_data["text_blocks"],
+                            slide_data["image_objects"],
+                            (img_w, img_h)
+                        )
+                        
                 except Exception as e:
                     print(f"Error processing page {idx}: {e}")
                     import traceback
